@@ -1,4 +1,5 @@
 import itertools
+import math
 import random
 
 import pandas as pd
@@ -7,7 +8,6 @@ from itertools import product
 
 #given a sequence s extract the subsequences starting and ending at positions indexed at i in the relative lists
 def seq_extraction (start,end,file):
-
     #create list of CpG strings
     l=[] #initialize list od CpG seq
     for i in range(len(start)): #for each iterated index
@@ -26,7 +26,10 @@ def model(l):
         count_gen_dim = 0
         for s in l:  # for each seqence in the CpG sequences list
             count_dim += s.count(dim)  # count p specific dimer in the seq
-            count_gen_dim += s.count(p[0])  # count all dimers starting with same character in the seq
+            count_gen_dim += s.count(p[0])  # count all dimers starting with same character in the dimer followed by A nt.
+            #count_gen_dim += s.count(p[0]+'C')# count all dimers starting with same character in the dimer followed by C nt.
+            #count_gen_dim += s.count(p[0]+'G')# count all dimers starting with same character in the dimer followed by G nt.
+            #count_gen_dim += s.count(p[0]+'T')# count all dimers starting with same character in the dimer followed by T nt.
         freq = count_dim / count_gen_dim  # calculate frequency of p dimer over all possible dimers starting with same nt.
         df.loc[[p[0]], [p[1]]] = freq  # insert in the df
     return df
@@ -50,7 +53,19 @@ def non_CpG_seq_extraction(cpg,file):
 
 #given the inside model in_model and outside model out_model checks if a query sequence q is found in CpG island regions or not
 def is_CpG(in_model, out_model, q):
-    pass
+    inside=0.25 #0.25 is the initial probability of the first nt. of the query
+    outside=0.25
+    for n in range(len(q)-1):
+        dim=q[n:n+2]
+        inside*=in_model.loc[dim[1],dim[0]]
+        outside*= out_model.loc[dim[1], dim[0]]
+    print('inside probability:',inside)
+    print('outside probability:',outside)
+    S=math.log(inside/outside)
+    print('log of probabilities:',S)
+    return S>0
+
+
 
 
 
@@ -74,11 +89,19 @@ if __name__ =="__main__":
     #BUILD CPG AND NON_CPG MODELS
     seq_CpG=seq_extraction(start,end,file) #extract CpG islands sequences from file
     CpG_model=model(seq_CpG) #build conditional frequency matrix for all 16 dimers (model)
-    print('\n CpG_model:\n',CpG_model)
+    #print('\n CpG_model:\n',CpG_model)
     file = file.replace('N', '') #remove N from the sequence
     seq_non_CpG=non_CpG_seq_extraction(seq_CpG,file) #extract random sequences from the file of the same length of the CpG island seuqences
     non_CpG_model=model( seq_non_CpG) #build model for non CpG island sequences
-    print('\n non_CpG_model:\n',non_CpG_model)
+    #print('\n non_CpG_model:\n',non_CpG_model)
+
+    #QUERY A SEQUENCE WITH THE MODEL CREATED
+    #query="".join(random.choice('ATCG') for i in range(4))
+    query='TGGCGCGCAAG'
+    #print(query)
+    infer=is_CpG(CpG_model,non_CpG_model,query)
+    print(f'Is {query} a CpG island sequence?',infer)
+
 
 
 
