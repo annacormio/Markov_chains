@@ -1,9 +1,7 @@
 import itertools
 import math
 import random
-
 import pandas as pd
-from itertools import product
 
 
 #given a sequence s extract the subsequences starting and ending at positions indexed at i in the relative lists
@@ -11,7 +9,7 @@ def seq_extraction (start,end,file):
     #create list of CpG strings
     l=[] #initialize list od CpG seq
     for i in range(len(start)): #for each iterated index
-        l.append(file[start[i]:end[i]]) #append in l the indexed CpG islands substrings
+        l.append(file[start[i]:end[i]+1]) #append in l the indexed CpG islands substrings
     return l
     #create model on CpG islands
 
@@ -26,10 +24,7 @@ def model(l):
         count_gen_dim = 0
         for s in l:  # for each seqence in the CpG sequences list
             count_dim += s.count(dim)  # count p specific dimer in the seq
-            count_gen_dim += s.count(p[0])  # count all dimers starting with same character in the dimer followed by A nt.
-            #count_gen_dim += s.count(p[0]+'C')# count all dimers starting with same character in the dimer followed by C nt.
-            #count_gen_dim += s.count(p[0]+'G')# count all dimers starting with same character in the dimer followed by G nt.
-            #count_gen_dim += s.count(p[0]+'T')# count all dimers starting with same character in the dimer followed by T nt.
+            count_gen_dim +=s.count(p[0])   # count all dimers starting with same character as the dimer
         freq = count_dim / count_gen_dim  # calculate frequency of p dimer over all possible dimers starting with same nt.
         df.loc[[p[0]], [p[1]]] = freq  # insert in the df
     return df
@@ -59,11 +54,23 @@ def is_CpG(in_model, out_model, q):
         dim=q[n:n+2]
         inside*=in_model.loc[dim[1],dim[0]]
         outside*= out_model.loc[dim[1], dim[0]]
-    print('inside probability:',inside)
-    print('outside probability:',outside)
+    #print('inside probability:',inside)
+    #print('outside probability:',outside)
     S=math.log(inside/outside)
-    print('log of probabilities:',S)
+    #print('log of probabilities:',S)
     return S>0
+
+
+#returns the window w offsets of the genome g when the log ratio computed is >S calculated with the inside and outised model passed in the function
+def is_CpG_windowed(g,w,in_model,out_model):
+    offsets=[]
+    for o in range(0,len(g),w): #proceed in the genome with w (window length=avg length of cpG islands) as step
+        r=is_CpG(in_model,out_model,g[o:o+w])
+        if r==True:
+             offsets.append(o)
+    return offsets
+
+
 
 
 
@@ -72,7 +79,7 @@ def is_CpG(in_model, out_model, q):
 if __name__ =="__main__":
 
     #OPEN CHR22 SEQUENCE FILE
-    I = open("chr22.fa", 'r')  # open file
+    I = open("chr22.fa")  # open file
     file = I.read().replace('\n','')  # read file content conactenating all lines as one string
     file = file[6:].upper()  # slice first 6 characters of the string (header) and convert all characters in uppercase
 
@@ -96,11 +103,19 @@ if __name__ =="__main__":
     #print('\n non_CpG_model:\n',non_CpG_model)
 
     #QUERY A SEQUENCE WITH THE MODEL CREATED
-    #query="".join(random.choice('ATCG') for i in range(4))
-    query='TGGCGCGCAAG'
-    #print(query)
+    query="".join(random.choice('ATCG') for i in range(100))
+    #query='TATATAGCAAG'
     infer=is_CpG(CpG_model,non_CpG_model,query)
-    print(f'Is {query} a CpG island sequence?',infer)
+    print(f'Is "{query}" a CpG island sequence?\n',infer)
+
+    genome="".join(random.choice('ATCG') for i in range(1000))
+    tot_len=0
+    for s in seq_CpG:
+        tot_len+= len(s)
+    avg=round(tot_len/len(seq_CpG))
+    #print(avg)
+
+    #print(is_CpG_windowed(genome,avg,CpG_model,non_CpG_model))
 
 
 
