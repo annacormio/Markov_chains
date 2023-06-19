@@ -66,16 +66,16 @@ def is_CpG(in_model, out_model, q):
         outside=outside+math.log(out_model.loc[dim[1], dim[0]],10)
     S=inside-outside
     #print('log of probabilities:',S)
-    return S>0
+    return S
 
 
 #returns the window w offsets of the genome g when the log ratio computed is >S calculated with the inside and outised model passed in the function
 def is_CpG_windowed(g,w,in_model,out_model):
     offsets=[]
-    for o in range(0,len(g),w): #proceed in the genome with w (window length=avg length of cpG islands) as step
+    for o in range(len(g)-w): #proceed in the genome with w (window length=avg length of cpG islands) as step
         r=is_CpG(in_model,out_model,g[o:o+w])
-        if r==True:
-             offsets.append(o)
+        if r>0:
+             offsets.append((r,o+1))
     return offsets
 
 
@@ -111,17 +111,23 @@ if __name__ =="__main__":
 
     #QUERY A SEQUENCE WITH THE MODEL CREATED
     #query="".join(random.choice('ATCG') for i in range(100))
-    query='TATATAGCAAG'  #test
+    query='GCGCGGCAAG'  #test
     infer=is_CpG(CpG_model,non_CpG_model,query)
-    print(f'Is "{query}" a CpG island sequence?\n',infer)
+    print(f'Is "{query}" a CpG island sequence?\n',infer>0)
 
-    genome="".join(random.choice('ATCG') for i in range(1000))
+    #genome="".join(random.choice('ATCG') for i in range(1000))
+    cpg=''
+    for s in seq_CpG:
+        cpg+=s
+
+    s=random.randint(0,len(file)-1)
+    genome=cpg[s:]
+    #print(genome)
     tot_len=0
     for s in seq_CpG:
         tot_len+= len(s)
     avg=round(tot_len/len(seq_CpG))
-    print(avg)
-
+    #print(avg)
     print(is_CpG_windowed(genome,avg,CpG_model,non_CpG_model))
 
 
